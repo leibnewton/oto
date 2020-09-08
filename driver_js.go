@@ -166,7 +166,11 @@ registerProcessor('ebiten-audio-worklet-processor', EbitenAudioWorkletProcessor)
 	return node, nil
 }
 
-func newDriver(sampleRate, channelNum, bitDepthInBytes, bufferSize int) (tryWriteCloser, error) {
+func getDevices(mapperInclude bool) ([]*Device, error) {
+	return nil, nil
+}
+
+func newDriver(deviceNum, sampleRate, channelNum, bitDepthInBytes, bufferSize int) (tryWriteCloser, error) {
 	class := js.Global().Get("AudioContext")
 	if valueEqual(class, js.Undefined()) {
 		class = js.Global().Get("webkitAudioContext")

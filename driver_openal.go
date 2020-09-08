@@ -63,6 +63,10 @@ import (
 	"unsafe"
 )
 
+func getDevices(mapperInclude bool) ([]*Device, error) {
+	return nil, nil
+}
+
 // As x/mobile/exp/audio/al is broken on macOS (https://github.com/golang/go/issues/15075),
 // and that doesn't support FreeBSD, use OpenAL directly here.
 
@@ -127,7 +131,7 @@ func alFormat(channelNum, bitDepthInBytes int) C.ALenum {
 
 const numBufs = 2
 
-func newDriver(sampleRate, channelNum, bitDepthInBytes, bufferSizeInBytes int) (tryWriteCloser, error) {
+func newDriver(deviceNum, sampleRate, channelNum, bitDepthInBytes, bufferSizeInBytes int) (tryWriteCloser, error) {
 	name := C.alcGetString(nil, C.ALC_DEFAULT_DEVICE_SPECIFIER)
 	d := alDevice(C._alcOpenDevice((*C.ALCchar)(name)))
 	if d == 0 {

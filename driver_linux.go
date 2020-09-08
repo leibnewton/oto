@@ -62,6 +62,10 @@ import (
 	"unsafe"
 )
 
+func getDevices(mapperInclude bool) ([]*Device, error) {
+	return nil, nil
+}
+
 type driver struct {
 	handle          *C.snd_pcm_t
 	buf             []byte
@@ -74,7 +78,7 @@ func alsaError(err C.int) error {
 	return fmt.Errorf("oto: ALSA error: %s", C.GoString(C.snd_strerror(err)))
 }
 
-func newDriver(sampleRate, numChans, bitDepthInBytes, bufferSizeInBytes int) (tryWriteCloser, error) {
+func newDriver(deviceNum, sampleRate, numChans, bitDepthInBytes, bufferSizeInBytes int) (tryWriteCloser, error) {
 	p := &driver{
 		numChans:        numChans,
 		bitDepthInBytes: bitDepthInBytes,

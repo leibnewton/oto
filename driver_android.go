@@ -180,6 +180,10 @@ import (
 	"golang.org/x/mobile/app"
 )
 
+func getDevices(mapperInclude bool) ([]*Device, error) {
+	return nil, nil
+}
+
 type driver struct {
 	sampleRate      int
 	channelNum      int
@@ -191,7 +195,7 @@ type driver struct {
 	bufferSize      int
 }
 
-func newDriver(sampleRate, channelNum, bitDepthInBytes, bufferSizeInBytes int) (tryWriteCloser, error) {
+func newDriver(deviceNum, sampleRate, channelNum, bitDepthInBytes, bufferSizeInBytes int) (tryWriteCloser, error) {
 	p := &driver{
 		sampleRate:      sampleRate,
 		channelNum:      channelNum,

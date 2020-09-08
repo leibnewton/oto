@@ -35,6 +35,10 @@ import (
 
 const baseQueueBufferSize = 1024
 
+func getDevices(mapperInclude bool) ([]*Device, error) {
+	return nil, nil
+}
+
 type audioInfo struct {
 	channelNum      int
 	bitDepthInBytes int
@@ -87,7 +91,7 @@ func getDriver() *driver {
 // TOOD: Convert the error code correctly.
 // See https://stackoverflow.com/questions/2196869/how-do-you-convert-an-iphone-osstatus-code-to-something-useful
 
-func newDriver(sampleRate, channelNum, bitDepthInBytes, bufferSizeInBytes int) (tryWriteCloser, error) {
+func newDriver(deviceNum, sampleRate, channelNum, bitDepthInBytes, bufferSizeInBytes int) (tryWriteCloser, error) {
 	flags := C.kAudioFormatFlagIsPacked
 	if bitDepthInBytes != 1 {
 		flags |= C.kAudioFormatFlagIsSignedInteger
