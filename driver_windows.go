@@ -52,6 +52,27 @@ func (h *header) Write(waveOut uintptr, data []byte) error {
 	return nil
 }
 
+func getDevices(mapperInclude bool) ([]*Device, error) {
+	n, err := waveOutGetNumDevs()
+	if err != nil {
+		return nil, err
+	}
+	devs := make([]*Device, 0, n+1)
+	c := -1
+	if !mapperInclude {
+		c = 0
+	}
+	for ; c < n; c++ {
+		dev, err := waveOutGetDevCaps(uint32(c))
+		if err != nil {
+			return nil, err
+		}
+		dev.Number = c
+		devs = append(devs, dev)
+	}
+	return devs, nil
+}
+
 type driver struct {
 	out        uintptr
 	headers    []*header
@@ -59,7 +80,7 @@ type driver struct {
 	bufferSize int
 }
 
-func newDriver(sampleRate, channelNum, bitDepthInBytes, bufferSizeInBytes int) (tryWriteCloser, error) {
+func newDriver(deviceNum, sampleRate, channelNum, bitDepthInBytes, bufferSizeInBytes int) (tryWriteCloser, error) {
 	numBlockAlign := channelNum * bitDepthInBytes
 	f := &waveformatex{
 		wFormatTag:      waveFormatPCM,
@@ -69,7 +90,7 @@ func newDriver(sampleRate, channelNum, bitDepthInBytes, bufferSizeInBytes int) (
 		wBitsPerSample:  uint16(bitDepthInBytes * 8),
 		nBlockAlign:     uint16(numBlockAlign),
 	}
-	w, err := waveOutOpen(f)
+	w, err := waveOutOpen(f, deviceNum)
 	const elementNotFound = 1168
 	if e, ok := err.(*winmmError); ok && e.errno == elementNotFound {
 		// No device was found. Return the dummy device.

@@ -70,16 +70,6 @@ type wavecap struct {
 	Support       uint32     // functionality supported by driver
 }
 
-type WaveCap struct {
-	Mid           uint16 // manufacturer ID
-	Pid           uint16 // product ID
-	DriverVersion uint32 // version of the driver
-	Pname         string // product name (NULL terminated string)
-	Formats       uint32 // formats supported
-	Channels      uint16 // number of sources supported
-	Support       uint32 // functionality supported by driver
-}
-
 const (
 	waveFormatPCM = 1
 	whdrInqueue   = 16
@@ -145,13 +135,17 @@ func (e *winmmError) Error() string {
 	return fmt.Sprintf("winmm error at %s", e.fname)
 }
 
-func waveOutOpen(f *waveformatex) (uintptr, error) {
+func waveOutOpen(f *waveformatex, deviceNum int) (uintptr, error) {
 	const (
 		waveMapper   = 0xffffffff
 		callbackNull = 0
 	)
 	var w uintptr
-	r, _, e := procWaveOutOpen.Call(uintptr(unsafe.Pointer(&w)), waveMapper, uintptr(unsafe.Pointer(f)),
+	var dev uintptr = waveMapper
+	if deviceNum >= 0 {
+		dev = uintptr(deviceNum)
+	}
+	r, _, e := procWaveOutOpen.Call(uintptr(unsafe.Pointer(&w)), dev, uintptr(unsafe.Pointer(f)),
 		0, 0, callbackNull)
 	runtime.KeepAlive(f)
 	if e.(windows.Errno) != 0 {
@@ -223,7 +217,7 @@ func waveOutWrite(hwo uintptr, pwh *wavehdr) error {
 	return nil
 }
 
-func WaveOutGetNumDevs() (int, error) {
+func waveOutGetNumDevs() (int, error) {
 	r, _, e := procWaveOutGetNumDevs.Call()
 	if e.(windows.Errno) != 0 {
 		return 0, &winmmError{
@@ -234,7 +228,7 @@ func WaveOutGetNumDevs() (int, error) {
 	return int(r), nil
 }
 
-func WaveOutGetDevCaps(uDeviceID uint32) (*WaveCap, error) {
+func waveOutGetDevCaps(uDeviceID uint32) (*Device, error) {
 	pwoc := &wavecap{}
 	r, _, e := procWaveOutGetDevCapsW.Call(uintptr(uDeviceID), uintptr(unsafe.Pointer(pwoc)), unsafe.Sizeof(wavecap{}))
 	runtime.KeepAlive(pwoc)
@@ -250,13 +244,12 @@ func WaveOutGetDevCaps(uDeviceID uint32) (*WaveCap, error) {
 			mmresult: mmresult(r),
 		}
 	}
-	return &WaveCap{
-		Mid:           pwoc.Mid,
-		Pid:           pwoc.Pid,
-		DriverVersion: pwoc.DriverVersion,
-		Pname:         syscall.UTF16ToString(pwoc.Pname[:]),
-		Formats:       pwoc.Formats,
-		Channels:      pwoc.Channels,
-		Support:       pwoc.Support,
+	return &Device{
+		Mid:      pwoc.Mid,
+		Pid:      pwoc.Pid,
+		Name:     syscall.UTF16ToString(pwoc.Pname[:]),
+		Formats:  pwoc.Formats,
+		Channels: int(pwoc.Channels),
+		Support:  pwoc.Support,
 	}, nil
 }

@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"math"
 	"sync"
@@ -27,6 +28,7 @@ import (
 )
 
 var (
+	deviceNum       = flag.Int("devicenum", -1, "device number")
 	sampleRate      = flag.Int("samplerate", 44100, "sample rate")
 	channelNum      = flag.Int("channelnum", 2, "number of channel")
 	bitDepthInBytes = flag.Int("bitdepthinbytes", 2, "bit depth in bytes")
@@ -131,7 +133,7 @@ func run() error {
 		freqG = 784.0
 	)
 
-	c, err := oto.NewContext(*sampleRate, *channelNum, *bitDepthInBytes, 4096)
+	c, err := oto.NewContext(*deviceNum, *sampleRate, *channelNum, *bitDepthInBytes, 4096)
 	if err != nil {
 		return err
 	}
@@ -171,6 +173,13 @@ func run() error {
 
 func main() {
 	flag.Parse()
+	devs, err := oto.GetDevices(true)
+	if err != nil {
+		panic(err)
+	}
+	for _, dev := range devs {
+		fmt.Printf("#%d %s %d %d\n", dev.Number, dev.Name, dev.Mid, dev.Pid)
+	}
 	if err := run(); err != nil {
 		panic(err)
 	}

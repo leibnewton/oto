@@ -35,6 +35,20 @@ type Context struct {
 	errCh        chan error
 }
 
+type Device struct {
+	Name     string
+	Number   int
+	Channels int
+	Mid      uint16
+	Pid      uint16
+	Formats  uint32
+	Support  uint32
+}
+
+func GetDevices(mapperInclude bool) ([]*Device, error) {
+	return getDevices(mapperInclude)
+}
+
 var (
 	theContext *Context
 	contextM   sync.Mutex
@@ -58,7 +72,7 @@ var errClosed = errors.New("closed")
 // of Player's Write calls, thus reducing CPU time. Smaller buffer enables more precise timing. The
 // longest delay between when samples were written and when they started playing is equal to the size
 // of the buffer.
-func NewContext(sampleRate, channelNum, bitDepthInBytes, bufferSizeInBytes int) (*Context, error) {
+func NewContext(deviceNum, sampleRate, channelNum, bitDepthInBytes, bufferSizeInBytes int) (*Context, error) {
 	contextM.Lock()
 	defer contextM.Unlock()
 
@@ -66,7 +80,7 @@ func NewContext(sampleRate, channelNum, bitDepthInBytes, bufferSizeInBytes int) 
 		panic("oto: NewContext can be called only once")
 	}
 
-	d, err := newDriver(sampleRate, channelNum, bitDepthInBytes, bufferSizeInBytes)
+	d, err := newDriver(deviceNum, sampleRate, channelNum, bitDepthInBytes, bufferSizeInBytes)
 	if err != nil {
 		return nil, err
 	}
