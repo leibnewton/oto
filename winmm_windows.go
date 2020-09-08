@@ -19,6 +19,7 @@ package oto
 import (
 	"fmt"
 	"runtime"
+	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -33,6 +34,8 @@ var (
 	procWaveOutClose         = winmm.NewProc("waveOutClose")
 	procWaveOutPrepareHeader = winmm.NewProc("waveOutPrepareHeader")
 	procWaveOutWrite         = winmm.NewProc("waveOutWrite")
+	procWaveOutGetNumDevs    = winmm.NewProc("waveOutGetNumDevs")
+	procWaveOutGetDevCapsW   = winmm.NewProc("waveOutGetDevCapsW")
 )
 
 type wavehdr struct {
@@ -54,6 +57,27 @@ type waveformatex struct {
 	nBlockAlign     uint16
 	wBitsPerSample  uint16
 	cbSize          uint16
+}
+
+type wavecap struct {
+	Mid           uint16     // manufacturer ID
+	Pid           uint16     // product ID
+	DriverVersion uint32     // version of the driver
+	Pname         [32]uint16 // product name (NULL terminated string)
+	Formats       uint32     // formats supported
+	Channels      uint16     // number of sources supported
+	Reserved1     uint16     // packing
+	Support       uint32     // functionality supported by driver
+}
+
+type WaveCap struct {
+	Mid           uint16 // manufacturer ID
+	Pid           uint16 // product ID
+	DriverVersion uint32 // version of the driver
+	Pname         string // product name (NULL terminated string)
+	Formats       uint32 // formats supported
+	Channels      uint16 // number of sources supported
+	Support       uint32 // functionality supported by driver
 }
 
 const (
@@ -197,4 +221,42 @@ func waveOutWrite(hwo uintptr, pwh *wavehdr) error {
 		}
 	}
 	return nil
+}
+
+func WaveOutGetNumDevs() (int, error) {
+	r, _, e := procWaveOutGetNumDevs.Call()
+	if e.(windows.Errno) != 0 {
+		return 0, &winmmError{
+			fname: "waveOutGetNumDevs",
+			errno: e.(windows.Errno),
+		}
+	}
+	return int(r), nil
+}
+
+func WaveOutGetDevCaps(uDeviceID uint32) (*WaveCap, error) {
+	pwoc := &wavecap{}
+	r, _, e := procWaveOutGetDevCapsW.Call(uintptr(uDeviceID), uintptr(unsafe.Pointer(pwoc)), unsafe.Sizeof(wavecap{}))
+	runtime.KeepAlive(pwoc)
+	if e.(windows.Errno) != 0 {
+		return nil, &winmmError{
+			fname: "waveOutGetDevCaps",
+			errno: e.(windows.Errno),
+		}
+	}
+	if mmresult(r) != mmsyserrNoerror {
+		return nil, &winmmError{
+			fname:    "waveOutGetDevCaps",
+			mmresult: mmresult(r),
+		}
+	}
+	return &WaveCap{
+		Mid:           pwoc.Mid,
+		Pid:           pwoc.Pid,
+		DriverVersion: pwoc.DriverVersion,
+		Pname:         syscall.UTF16ToString(pwoc.Pname[:]),
+		Formats:       pwoc.Formats,
+		Channels:      pwoc.Channels,
+		Support:       pwoc.Support,
+	}, nil
 }
