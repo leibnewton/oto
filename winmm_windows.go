@@ -126,13 +126,10 @@ type winmmError struct {
 }
 
 func (e *winmmError) Error() string {
-	if e.errno != 0 {
-		return fmt.Sprintf("winmm error at %s: Errno: %d", e.fname, e.errno)
-	}
 	if e.mmresult != mmsyserrNoerror {
-		return fmt.Sprintf("winmm error at %s: %s", e.fname, e.mmresult)
+		return fmt.Sprintf("winmm error at %s: %s Errno: %d", e.fname, e.mmresult, e.errno)
 	}
-	return fmt.Sprintf("winmm error at %s", e.fname)
+	return fmt.Sprintf("winmm error at %s: Errno: %d", e.fname, e.errno)
 }
 
 func waveOutOpen(f *waveformatex, deviceNum int) (uintptr, error) {
@@ -148,16 +145,11 @@ func waveOutOpen(f *waveformatex, deviceNum int) (uintptr, error) {
 	r, _, e := procWaveOutOpen.Call(uintptr(unsafe.Pointer(&w)), dev, uintptr(unsafe.Pointer(f)),
 		0, 0, callbackNull)
 	runtime.KeepAlive(f)
-	if e.(windows.Errno) != 0 {
-		return 0, &winmmError{
-			fname: "waveOutOpen",
-			errno: e.(windows.Errno),
-		}
-	}
 	if mmresult(r) != mmsyserrNoerror {
 		return 0, &winmmError{
 			fname:    "waveOutOpen",
 			mmresult: mmresult(r),
+			errno:    e.(windows.Errno),
 		}
 	}
 	return w, nil
@@ -165,17 +157,12 @@ func waveOutOpen(f *waveformatex, deviceNum int) (uintptr, error) {
 
 func waveOutClose(hwo uintptr) error {
 	r, _, e := procWaveOutClose.Call(hwo)
-	if e.(windows.Errno) != 0 {
-		return &winmmError{
-			fname: "waveOutClose",
-			errno: e.(windows.Errno),
-		}
-	}
 	// WAVERR_STILLPLAYING is ignored.
 	if mmresult(r) != mmsyserrNoerror && mmresult(r) != waveerrStillplaying {
 		return &winmmError{
 			fname:    "waveOutClose",
 			mmresult: mmresult(r),
+			errno:    e.(windows.Errno),
 		}
 	}
 	return nil
@@ -184,16 +171,11 @@ func waveOutClose(hwo uintptr) error {
 func waveOutPrepareHeader(hwo uintptr, pwh *wavehdr) error {
 	r, _, e := procWaveOutPrepareHeader.Call(hwo, uintptr(unsafe.Pointer(pwh)), unsafe.Sizeof(wavehdr{}))
 	runtime.KeepAlive(pwh)
-	if e.(windows.Errno) != 0 {
-		return &winmmError{
-			fname: "waveOutPrepareHeader",
-			errno: e.(windows.Errno),
-		}
-	}
 	if mmresult(r) != mmsyserrNoerror {
 		return &winmmError{
 			fname:    "waveOutPrepareHeader",
 			mmresult: mmresult(r),
+			errno:    e.(windows.Errno),
 		}
 	}
 	return nil
@@ -202,16 +184,11 @@ func waveOutPrepareHeader(hwo uintptr, pwh *wavehdr) error {
 func waveOutWrite(hwo uintptr, pwh *wavehdr) error {
 	r, _, e := procWaveOutWrite.Call(hwo, uintptr(unsafe.Pointer(pwh)), unsafe.Sizeof(wavehdr{}))
 	runtime.KeepAlive(pwh)
-	if e.(windows.Errno) != 0 {
-		return &winmmError{
-			fname: "waveOutWrite",
-			errno: e.(windows.Errno),
-		}
-	}
 	if mmresult(r) != mmsyserrNoerror {
 		return &winmmError{
 			fname:    "waveOutWrite",
 			mmresult: mmresult(r),
+			errno:    e.(windows.Errno),
 		}
 	}
 	return nil
@@ -219,7 +196,7 @@ func waveOutWrite(hwo uintptr, pwh *wavehdr) error {
 
 func waveOutGetNumDevs() (int, error) {
 	r, _, e := procWaveOutGetNumDevs.Call()
-	if e.(windows.Errno) != 0 {
+	if r == 0 && e.(windows.Errno) != 0 {
 		return 0, &winmmError{
 			fname: "waveOutGetNumDevs",
 			errno: e.(windows.Errno),
@@ -232,16 +209,11 @@ func waveOutGetDevCaps(uDeviceID uint32) (*Device, error) {
 	pwoc := &wavecap{}
 	r, _, e := procWaveOutGetDevCapsW.Call(uintptr(uDeviceID), uintptr(unsafe.Pointer(pwoc)), unsafe.Sizeof(wavecap{}))
 	runtime.KeepAlive(pwoc)
-	if e.(windows.Errno) != 0 {
-		return nil, &winmmError{
-			fname: "waveOutGetDevCaps",
-			errno: e.(windows.Errno),
-		}
-	}
 	if mmresult(r) != mmsyserrNoerror {
 		return nil, &winmmError{
 			fname:    "waveOutGetDevCaps",
 			mmresult: mmresult(r),
+			errno:    e.(windows.Errno),
 		}
 	}
 	return &Device{
